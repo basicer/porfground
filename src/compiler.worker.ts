@@ -63,7 +63,17 @@ self.onmessage = async ({ data }) => {
       put(files, 'output.c', encoder.encode(c));
       const exit = await execute(
         xcc,
-        ['cc', '-D__wasi__', '-I/usr/include', '-L/usr/lib', 'output.c', '-o', 'output.wasm'],
+        [
+          'cc',
+          '-D__wasi__',
+          '-I/usr/include',
+          '-L/usr/lib',
+          // xcc defaults to 8 KiB, which traps even at modest JS recursion depths.
+          '--stack-size=8388608',
+          'output.c',
+          '-o',
+          'output.wasm',
+        ],
         files,
         output,
       );

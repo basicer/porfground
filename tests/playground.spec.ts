@@ -50,6 +50,30 @@ test('real compiler pipeline, edits, diagnostics, and recovery', async ({ page }
   await expect(editor).toContainText('recovered');
   expect(errors).toEqual([]);
 });
+test('recursive calls and garbage-collected allocations do not trap', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByRole('status')).toHaveText('Ready', { timeout: 60000 });
+  await page.getByLabel('JavaScript source').fill(`
+function depth(n) { return n === 0 ? 0 : 1 + depth(n - 1); }
+console.log('depth=' + depth(200));
+let total = 0;
+for (let k = 0; k < 200; k++) {
+  const bytes = new Uint8Array(1024 * 1024);
+  bytes[0] = k;
+  total += bytes[0];
+}
+console.log('total=' + total);
+`);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.getByLabel('Program stdout')).toContainText('depth=200', { timeout: 60000 });
+  await expect(page.getByLabel('Program stdout')).toContainText('total=19900');
+  await expect(page.getByRole('status')).toHaveText('Ready');
+  await page.getByText('Build output', { exact: true }).click();
+  await expect(page.getByLabel('Build and compiler output')).toContainText(
+    'Process exited with code 0',
+  );
+});
+
 test('mobile viewport stays within the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./');
