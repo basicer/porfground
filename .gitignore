@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.tools/
+vendor/
+public/toolchain/
+test-results/
+playwright-report/
+*.tsbuildinfo
