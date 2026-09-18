@@ -20,7 +20,7 @@ test('real compiler pipeline, edits, diagnostics, and recovery', async ({ page }
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Ready', { timeout: 60000 });
   await expect(page.getByLabel('Program stdout')).toBeVisible();
-  await expect(page.getByLabel('Program stdout')).toContainText('fibonacci(10) = 55');
+  await expect(page.getByLabel('Program stdout')).toContainText('fibonacci 10 = 55');
   await expect(page.getByLabel('Program stdout')).not.toContainText('warning:');
   await expect(page.getByLabel('Program stdout')).not.toContainText('Process exited');
   await page.screenshot({ path: path.join(os.tmpdir(), 'porfground-desktop.png') });
@@ -30,9 +30,7 @@ test('real compiler pipeline, edits, diagnostics, and recovery', async ({ page }
   await expect(page.getByLabel('Build and compiler output')).toContainText(
     'Process exited with code 0',
   );
-  await expect(page.getByLabel('Build and compiler output')).not.toContainText(
-    'fibonacci(10) = 55',
-  );
+  await expect(page.getByLabel('Build and compiler output')).not.toContainText('fibonacci 10 = 55');
   const editor = page.getByLabel('JavaScript source');
   await editor.fill('console.log(6 * 7);');
   await expect(page.getByRole('status')).toHaveText('Ready', { timeout: 60000 });

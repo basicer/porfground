@@ -27,11 +27,10 @@ const initialSource = `function fib(n) {
 const n = 10;
 
 function test() {
-    const val = fib(n);
-    Porffor.c\`printf("fibonacci %.15g = %.15g\n", n.val, val.val);\`;
+  const val = fib(n);
+  Porffor.c\`printf("fibonacci %.15g = %.15g\\n", n.val, val.val);\`;
 }
 test();
-
 
 // Print a short sequence.
 let sequence = [];
