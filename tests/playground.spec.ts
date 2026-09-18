@@ -42,6 +42,13 @@ test('real compiler pipeline, edits, diagnostics, and recovery', async ({ page }
   await expect(page.getByRole('status')).toHaveText('Compilation failed', { timeout: 60000 });
   await expect(page.getByLabel('Build and compiler output')).toBeVisible();
   await expect(page.getByLabel('Build and compiler output')).toContainText('SyntaxError');
+  await expect(page.getByLabel('Generated C code')).toContainText('SyntaxError');
+  await expect(page.getByLabel('Generated C code')).toContainText('Porffor JS → C failed');
+  // Run switches to stdout first; a JS-to-C failure must bring diagnostics back.
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Compilation failed');
+  await expect(page.getByLabel('Build and compiler output')).toBeVisible();
+  await expect(page.getByLabel('Build and compiler output')).toContainText('Porffor JS → C failed');
   await editor.fill('console.log("recovered");');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByLabel('Program stdout')).toContainText('recovered', { timeout: 60000 });

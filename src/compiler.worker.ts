@@ -21,6 +21,8 @@ async function initialize() {
 self.onmessage = async ({ data }) => {
   const { source, revision, run } = data;
   let outputBytes = 0;
+  let stage = 'Porffor JS → C';
+  let diagnostics = '';
   const output = (text: string, error: boolean, channel: 'build' | 'stdout' = 'build') => {
     if (!text || outputBytes > 262144) return;
     outputBytes += text.length;
@@ -43,7 +45,11 @@ self.onmessage = async ({ data }) => {
         porffor,
         ['porf', 'c', 'main.js', '-o', 'output.c', '--no-ic', '--quiet'],
         files,
-        output,
+        (text, error) => {
+          // Retain diagnostics for the C pane even when they arrive on stdout.
+          diagnostics = (diagnostics + text).slice(-16384);
+          output(text, error);
+        },
       );
       const result = files.get('output.c');
       if (exit !== 0 || !(result instanceof File))
@@ -54,6 +60,7 @@ self.onmessage = async ({ data }) => {
     }
     send({ type: 'c', c, revision });
     if (run) {
+      stage = 'xcc C → WebAssembly';
       send({ type: 'status', text: 'Compiling C with xcc…' });
       const files: Files = new Map();
       for (const [name, bytes] of Object.entries(archive))
@@ -80,6 +87,7 @@ self.onmessage = async ({ data }) => {
       if (exit !== 0) throw new Error(`xcc compilation failed (exit ${exit}).`);
       const binary = files.get('output.wasm');
       if (!(binary instanceof File)) throw new Error('xcc produced no WebAssembly binary.');
+      stage = 'WebAssembly execution';
       send({ type: 'status', text: 'Running WebAssembly…' });
       const module = await WebAssembly.compile(binary.data as Uint8Array<ArrayBuffer>);
       const start = performance.now();
@@ -96,10 +104,20 @@ self.onmessage = async ({ data }) => {
       send({ type: 'done', ok: exitCode === 0, revision });
     } else send({ type: 'done', ok: true, revision });
   } catch (error) {
-    if (cachedSource !== source)
-      send({ type: 'c', c: '// Compilation failed. See the terminal for diagnostics.', revision });
-    output(`${error instanceof Error ? error.message : String(error)}\n`, true);
-    send({ type: 'done', ok: false, revision });
+    const message = `${stage} failed: ${error instanceof Error ? error.message : String(error)}`;
+    if (stage === 'Porffor JS → C') {
+      const detail = `${message}\n${diagnostics}`.trim();
+      send({
+        type: 'c',
+        c: detail
+          .split(/\r?\n/)
+          .map((line) => `// ${line}`)
+          .join('\n'),
+        revision,
+      });
+    }
+    // Completion errors must bypass the streaming output limit.
+    send({ type: 'done', ok: false, error: message, revision });
   }
 };
 initialize().catch((error) => send({ type: 'fatal', message: String(error) }));

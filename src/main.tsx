@@ -25,15 +25,20 @@ const initialSource = `function fib(n) {
 }
 
 const n = 10;
-console.log('fibonacci(' + n + ') = ' + fib(n));
+
+function test() {
+    const val = fib(n);
+    Porffor.c\`printf("fibonacci %.15g = %.15g\n", n.val, val.val);\`;
+}
+test();
+
 
 // Print a short sequence.
 let sequence = [];
 for (let i = 0; i <= n; i++) {
   sequence.push(fib(i));
 }
-console.log(sequence.join(' '));
-`;
+console.log(sequence.join(' '));`;
 const editorTheme = EditorView.theme({
   '&': { height: '100%', backgroundColor: '#10141e', fontSize: '14px' },
   '.cm-scroller': {
@@ -210,6 +215,8 @@ function App() {
         if (data.type === 'c' && data.revision === revision) preview(data.c);
         if (data.type === 'status') setStatus(data.text);
         if (data.type === 'done') {
+          if (data.error && (data.revision === revision || activeRun))
+            write(`\n\x1b[31m${data.error}\x1b[0m\n`);
           clearTimeout(watchdog);
           busy = false;
           activeRun = false;
@@ -244,6 +251,8 @@ function App() {
       setRunning(run);
       setStatus(run ? 'Building & running…' : 'Compiling…');
       if (run) {
+        m.logs.build = [];
+        m.terminals.build?.reset();
         write('\r\n\x1b[90m$ porfground run\x1b[0m\r\n');
         m.logs.stdout = [];
         m.terminals.stdout?.reset();
